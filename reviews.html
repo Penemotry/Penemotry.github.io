@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Review Page</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background: #f5f5f5;
+    padding: 20px;
+  }
+
+  h1 {
+    text-align: center;
+  }
+
+  #reviewBox {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 30px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  }
+
+  .stars {
+    display: flex;
+    gap: 5px;
+    font-size: 30px;
+    cursor: pointer;
+  }
+
+  .star {
+    color: #ccc;
+    transition: 0.2s;
+  }
+
+  .star.selected {
+    color: gold;
+  }
+
+  #reviewsList {
+    margin-top: 20px;
+  }
+
+  .review {
+    background: white;
+    padding: 15px;
+    border-radius: 10px;
+    margin-bottom: 15px;
+    box-shadow: 0 0 5px rgba(0,0,0,0.1);
+  }
+
+  .review .rating {
+    color: gold;
+    font-size: 20px;
+  }
+</style>
+</head>
+<body>
+
+<h1>⭐ User Reviews ⭐</h1>
+
+<div id="reviewBox">
+  <h2>Leave a Review</h2>
+
+  <div class="stars" id="starSelector">
+    <span class="star" data-value="1">★</span>
+    <span class="star" data-value="2">★</span>
+    <span class="star" data-value="3">★</span>
+    <span class="star" data-value="4">★</span>
+    <span class="star" data-value="5">★</span>
+  </div>
+
+  <textarea id="reviewText" rows="4" style="width:100%; margin-top:10px;" placeholder="Write your review..."></textarea>
+
+  <button id="submitReview" style="margin-top:10px; padding:10px 20px;">
+    Submit Review
+  </button>
+</div>
+
+<div id="reviewsList"></div>
+
+<script>
+  let selectedRating = 0;
+
+  const stars = document.querySelectorAll(".star");
+  const reviewText = document.getElementById("reviewText");
+  const reviewsList = document.getElementById("reviewsList");
+
+  // Load existing reviews
+  function loadReviews() {
+    const saved = JSON.parse(localStorage.getItem("reviews") || "[]");
+    reviewsList.innerHTML = "";
+
+    saved.forEach(r => {
+      const div = document.createElement("div");
+      div.className = "review";
+      div.innerHTML = `
+        <div class="rating">${"★".repeat(r.rating)}</div>
+        <p>${r.text}</p>
+      `;
+      reviewsList.appendChild(div);
+    });
+  }
+
+  loadReviews();
+
+  // Star selection
+  stars.forEach(star => {
+    star.addEventListener("click", () => {
+      selectedRating = Number(star.dataset.value);
+
+      stars.forEach(s => {
+        s.classList.toggle("selected", Number(s.dataset.value) <= selectedRating);
+      });
+    });
+  });
+
+  // Submit review
+  document.getElementById("submitReview").addEventListener("click", () => {
+    if (selectedRating === 0) {
+      alert("Please select a star rating.");
+      return;
+    }
+
+    if (reviewText.value.trim() === "") {
+      alert("Please write a review.");
+      return;
+    }
+
+    const newReview = {
+      rating: selectedRating,
+      text: reviewText.value.trim()
+    };
+
+    const saved = JSON.parse(localStorage.getItem("reviews") || "[]");
+    saved.push(newReview);
+    localStorage.setItem("reviews", JSON.stringify(saved));
+
+    reviewText.value = "";
+    selectedRating = 0;
+    stars.forEach(s => s.classList.remove("selected"));
+
+    loadReviews();
+  });
+</script>
+
+</body>
+</html>
