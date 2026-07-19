@@ -4,8 +4,6 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Zora — Your AI Voice Assistant</title>
-    <meta name="description" content="Zora is a voice-first AI assistant. Ask anything: weather, research, ideas." />
-    
     <style>
       @font-face {
         font-family: 'CameraPlainVariable';
@@ -24,6 +22,7 @@
         font-family: 'CameraPlainVariable', -apple-system, sans-serif;
         overflow: hidden;
         display: flex;
+        flex-direction: column;
         align-items: center;
         justify-content: center;
       }
@@ -33,15 +32,35 @@
         width: 100%;
         height: 100%;
         display: flex;
+        flex-direction: column;
         align-items: center;
         justify-content: center;
         cursor: pointer;
-        border: none;
-        background: none;
-        outline: none;
       }
 
-      /* Core Orb Styling & Ambient Animations */
+      .status-text {
+        position: absolute;
+        top: 40px;
+        color: rgba(255, 255, 255, 0.6);
+        font-size: 18px;
+        letter-spacing: 1px;
+        pointer-events: none;
+        text-align: center;
+        padding: 0 20px;
+      }
+
+      .subtitle-text {
+        position: absolute;
+        bottom: 60px;
+        color: #fff;
+        font-size: 20px;
+        text-align: center;
+        max-width: 80%;
+        min-height: 24px;
+        pointer-events: none;
+        line-height: 1.4;
+      }
+
       .zora-orb-stage {
         position: relative;
         width: 300px;
@@ -57,7 +76,7 @@
         height: 120%;
         background: radial-gradient(circle, rgba(87, 94, 207, 0.4) 0%, rgba(248, 88, 188, 0.1) 50%, transparent 70%);
         filter: blur(30px);
-        animation: pulseAura 4s ease-in-out infinite alternate;
+        transition: transform 0.1s ease;
       }
 
       .zora-orb {
@@ -67,91 +86,222 @@
         border-radius: 50%;
         background: radial-gradient(circle at 30% 30%, #575ecf, #f858bc, #fe3f21);
         box-shadow: 0 0 50px rgba(87, 94, 207, 0.6), inset 0 0 30px rgba(255, 255, 255, 0.2);
-        animation: floatOrb 6s ease-in-out infinite;
         overflow: hidden;
-        transition: transform 0.4s ease, box-shadow 0.4s ease, background 0.4s ease;
+        transition: transform 0.1s ease, box-shadow 0.3s ease, background 0.5s ease;
       }
 
-      .zora-orb-glass {
-        position: absolute;
-        top: 0; left: 0; right: 0; bottom: 0;
-        border-radius: 50%;
-        background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 50%);
+      .zora-orb.listening {
+        background: radial-gradient(circle at 30% 30%, #f858bc, #fe7b02, #575ecf);
+        box-shadow: 0 0 70px rgba(248, 88, 188, 0.8);
+      }
+
+      .zora-orb.speaking {
+        background: radial-gradient(circle at 30% 30%, #575ecf, #00f2fe, #f858bc);
+        box-shadow: 0 0 70px rgba(0, 242, 254, 0.8);
       }
 
       .zora-ring {
         position: absolute;
         border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: 50%;
-        animation: spinRing 10s linear infinite;
       }
 
-      .zora-ring-1 { width: 240px; height: 240px; border-color: rgba(87, 94, 207, 0.2); animation-duration: 8s; }
-      .zora-ring-2 { width: 280px; height: 280px; border-color: rgba(248, 88, 188, 0.15); animation-duration: 12s; animation-direction: reverse; }
-      .zora-ring-3 { width: 320px; height: 320px; border-color: rgba(254, 63, 33, 0.1); animation-duration: 16s; }
-
-      @keyframes floatOrb {
-        0% { transform: translateY(0px) scale(1); }
-        50% { transform: translateY(-10px) scale(1.02); }
-        100% { transform: translateY(0px) scale(1); }
-      }
-
-      @keyframes pulseAura {
-        0% { transform: scale(0.9); opacity: 0.4; }
-        100% { transform: scale(1.1); opacity: 0.7; }
-      }
-
-      @keyframes spinRing {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-      }
+      .zora-ring-1 { width: 240px; height: 240px; border-color: rgba(87, 94, 207, 0.2); }
+      .zora-ring-2 { width: 280px; height: 280px; border-color: rgba(248, 88, 188, 0.15); }
+      .zora-ring-3 { width: 320px; height: 320px; border-color: rgba(254, 63, 33, 0.1); }
     </style>
   </head>
   <body>
-    <div class="zora-page" role="button" aria-label="Talk to Zora">
-      <div class="zora-stars"></div>
+    <div class="zora-page" id="zoraContainer">
+      <div class="status-text" id="statusLabel">Click anywhere to wake up Zora</div>
+      <div class="subtitle-text" id="subtitles"></div>
+      
       <div class="zora-orb-stage">
-        <div class="zora-aura"></div>
-        <div class="zora-ring zora-ring-1 zora-ring-idle"></div>
-        <div class="zora-ring zora-ring-2 zora-ring-idle"></div>
-        <div class="zora-ring zora-ring-3 zora-ring-idle"></div>
-        <div class="zora-orb-scale">
-          <div class="zora-orb zora-orb-idle">
-            <div class="zora-orb-plasma-a"></div>
-            <div class="zora-orb-plasma-b"></div>
-            <div class="zora-orb-plasma-c"></div>
-            <div class="zora-orb-glass"></div>
-            <div class="zora-orb-shine"></div>
-            <div class="zora-orb-core"></div>
-          </div>
-        </div>
+        <div class="zora-aura" id="aura"></div>
+        <div class="zora-ring zora-ring-1"></div>
+        <div class="zora-ring zora-ring-2"></div>
+        <div class="zora-ring zora-ring-3"></div>
+        <div class="zora-orb" id="orb"></div>
       </div>
     </div>
 
     <script>
-      document.addEventListener("DOMContentLoaded", () => {
-        const zoraButton = document.querySelector(".zora-page");
-        const orb = document.querySelector(".zora-orb");
-        let isListening = false;
+      const container = document.getElementById('zoraContainer');
+      const orb = document.getElementById('orb');
+      const aura = document.getElementById('aura');
+      const statusLabel = document.getElementById('statusLabel');
+      const subtitles = document.getElementById('subtitles');
 
-        if (zoraButton && orb) {
-          zoraButton.addEventListener("click", () => {
-            isListening = !isListening;
-            
-            if (isListening) {
-              console.log("Zora is listening...");
-              orb.style.transform = "scale(1.15)";
-              orb.style.boxShadow = "0 0 70px rgba(248, 88, 188, 0.9)";
-              orb.style.background = "radial-gradient(circle at 30% 30%, #f858bc, #fe7b02, #575ecf)";
-            } else {
-              console.log("Zora stopped listening.");
-              orb.style.transform = "";
-              orb.style.boxShadow = "";
-              orb.style.background = "";
-            }
-          });
+      let recognition;
+      let audioContext;
+      let analyser;
+      let javascriptNode;
+      let mediaStream;
+      let isSystemActive = false;
+
+      // Check browser support
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      
+      if (!SpeechRecognition) {
+        statusLabel.textContent = "Your browser does not support Speech Recognition. Try Chrome or Safari.";
+      }
+
+      container.addEventListener('click', () => {
+        if (!SpeechRecognition) return;
+        if (window.speechSynthesis.speaking) {
+          window.speechSynthesis.cancel();
+        }
+        if (!isSystemActive) {
+          startListeningMode();
         }
       });
+
+      function startListeningMode() {
+        isSystemActive = true;
+        statusLabel.textContent = "Listening...";
+        subtitles.textContent = "";
+        orb.className = "zora-orb listening";
+
+        recognition = new SpeechRecognition();
+        recognition.continuous = false;
+        recognition.interimResults = false;
+        recognition.lang = 'en-US';
+
+        recognition.onstart = () => {
+          setupAudioAnalysis();
+        };
+
+        recognition.onresult = async (event) => {
+          const transcript = event.results[0][0].transcript;
+          subtitles.textContent = `"${transcript}"`;
+          statusLabel.textContent = "Thinking...";
+          orb.className = "zora-orb";
+          stopAudioAnalysis();
+          
+          const reply = await generateAIResponse(transcript);
+          speakResponse(reply);
+        };
+
+        recognition.onerror = (e) => {
+          console.error(e);
+          resetToIdle("Sorry, I didn't catch that. Click to try again.");
+        };
+
+        recognition.onend = () => {
+          if (statusLabel.textContent === "Listening...") {
+            resetToIdle("Click to talk");
+          }
+        };
+
+        recognition.start();
+      }
+
+      // Audio analysis loops to measure mic volume and scale the orb dynamically
+      async function setupAudioAnalysis() {
+        try {
+          mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+          audioContext = new (window.AudioContext || window.webkitAudioContext)();
+          analyser = audioContext.createAnalyser();
+          const source = audioContext.createMediaStreamSource(mediaStream);
+          
+          analyser.fftSize = 256;
+          source.connect(analyser);
+          
+          javascriptNode = audioContext.createScriptProcessor(256, 1, 1);
+          analyser.connect(javascriptNode);
+          javascriptNode.connect(audioContext.destination);
+          
+          javascriptNode.onaudioprocess = () => {
+            const array = new Uint8Array(analyser.frequencyBinCount);
+            analyser.getByteFrequencyData(array);
+            let values = 0;
+            for (let i = 0; i < array.length; i++) {
+              values += array[i];
+            }
+            const average = values / array.length;
+            
+            // Map the mic volume directly to CSS scale values
+            if (isSystemActive && orb.classList.contains('listening')) {
+              const scaleValue = 1 + (average / 120); 
+              orb.style.transform = `scale(${scaleValue})`;
+              aura.style.transform = `scale(${scaleValue * 1.1})`;
+            }
+          };
+        } catch (err) {
+          console.error("Microphone access denied or error:", err);
+        }
+      }
+
+      function stopAudioAnalysis() {
+        if (javascriptNode) javascriptNode.disconnect();
+        if (analyser) analyser.disconnect();
+        if (audioContext) audioContext.close();
+        if (mediaStream) mediaStream.getTracks().forEach(track => track.stop());
+        orb.style.transform = "scale(1)";
+        aura.style.transform = "scale(1)";
+      }
+
+      // Client-side local response logic 
+      async function generateAIResponse(prompt) {
+        const text = prompt.toLowerCase();
+        
+        if (text.includes('weather')) {
+          return "I don't have real-time satellite radar hooks right now, but it looks clear and bright inside my system mainframe.";
+        } else if (text.includes('hello') || text.includes('hi ')) {
+          return "Hello there! I am Zora. Your voice-activated smart computing interface. What are we exploring today?";
+        } else if (text.includes('your name')) {
+          return "My name is Zora. I am an advanced voice-first digital assistant ecosystem.";
+        } else if (text.includes('idea') || text.includes('creative')) {
+          return "Here is an idea: You could build a retro 8-bit visual simulator that pulses code layouts based on chiptune tracker waveforms!";
+        } else if (text.includes('research') || text.includes('tell me about')) {
+          return `Analyzing data metrics regarding your search inquiry. Based on historical data structures, deep experimentation always leads to breakthrough applications.`;
+        }
+        
+        return `Interesting thought. I processed your input statement and verified that its structural code parameters are clean and functional. What is our next move?`;
+      }
+
+      // Text-to-Speech Output Function
+      function speakResponse(text) {
+        statusLabel.textContent = "Speaking...";
+        subtitles.textContent = text;
+        orb.className = "zora-orb speaking";
+
+        const utterance = new SpeechSynthesisUtterance(text);
+        
+        // Dynamic subtle pulse animation while speaking
+        let pulseDir = 1;
+        let pulseVal = 1;
+        const speakInterval = setInterval(() => {
+          if (!window.speechSynthesis.speaking) {
+            clearInterval(speakInterval);
+            return;
+          }
+          pulseVal += 0.01 * pulseDir;
+          if (pulseVal > 1.08 || pulseVal < 0.98) pulseDir *= -1;
+          orb.style.transform = `scale(${pulseVal})`;
+        }, 30);
+
+        utterance.onend = () => {
+          clearInterval(speakInterval);
+          resetToIdle("Click anywhere to talk again");
+        };
+
+        utterance.onerror = () => {
+          clearInterval(speakInterval);
+          resetToIdle("Click anywhere to talk again");
+        };
+
+        window.speechSynthesis.speak(utterance);
+      }
+
+      function resetToIdle(message) {
+        isSystemActive = false;
+        stopAudioAnalysis();
+        statusLabel.textContent = message;
+        orb.className = "zora-orb";
+        orb.style.transform = "scale(1)";
+        aura.style.transform = "scale(1)";
+      }
     </script>
   </body>
 </html>
