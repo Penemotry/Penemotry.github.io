@@ -4,46 +4,154 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Zora — Your AI Voice Assistant</title>
-    <meta property="og:type" content="website" />
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Zora — Your AI Voice Assistant" />
-    <meta name="twitter:description" content="Zora is a voice-first AI assistant. Ask anything: weather, research, ideas." />
-    <meta property="og:image" content="https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/2f48586f-c019-423c-b033-ca4288b9f51c" />
-    <meta name="twitter:image" content="https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/2f48586f-c019-423c-b033-ca4288b9f51c" />
     <meta name="description" content="Zora is a voice-first AI assistant. Ask anything: weather, research, ideas." />
-    <meta property="og:title" content="Zora — Your AI Voice Assistant" />
-    <meta property="og:description" content="Zora is a voice-first AI assistant. Ask anything: weather, research, ideas." />
     
-    <!-- Link to external stylesheet -->
-    <link rel="stylesheet" href="style.css">
-    
-    <!-- Preloads for internal mechanics -->
-    <link rel="modulepreload" href="/assets/index-B4aZZ1Ve.js" />
-    <link rel="modulepreload" href="/assets/routes-y_WOk7jR.js" />
+    <style>
+      @font-face {
+        font-family: 'CameraPlainVariable';
+        src: url('https://cdn.gpteng.co/mcp-widgets/v1/fonts/CameraPlainVariable.woff2') format('woff2');
+        font-weight: 100 900;
+        font-style: normal;
+        font-display: swap;
+      }
+
+      body, html {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        background-color: #0b0b0e;
+        font-family: 'CameraPlainVariable', -apple-system, sans-serif;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .zora-page {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        border: none;
+        background: none;
+        outline: none;
+      }
+
+      /* Core Orb Styling & Ambient Animations */
+      .zora-orb-stage {
+        position: relative;
+        width: 300px;
+        height: 300px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .zora-aura {
+        position: absolute;
+        width: 120%;
+        height: 120%;
+        background: radial-gradient(circle, rgba(87, 94, 207, 0.4) 0%, rgba(248, 88, 188, 0.1) 50%, transparent 70%);
+        filter: blur(30px);
+        animation: pulseAura 4s ease-in-out infinite alternate;
+      }
+
+      .zora-orb {
+        position: relative;
+        width: 180px;
+        height: 180px;
+        border-radius: 50%;
+        background: radial-gradient(circle at 30% 30%, #575ecf, #f858bc, #fe3f21);
+        box-shadow: 0 0 50px rgba(87, 94, 207, 0.6), inset 0 0 30px rgba(255, 255, 255, 0.2);
+        animation: floatOrb 6s ease-in-out infinite;
+        overflow: hidden;
+        transition: transform 0.4s ease, box-shadow 0.4s ease, background 0.4s ease;
+      }
+
+      .zora-orb-glass {
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        border-radius: 50%;
+        background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 50%);
+      }
+
+      .zora-ring {
+        position: absolute;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+        animation: spinRing 10s linear infinite;
+      }
+
+      .zora-ring-1 { width: 240px; height: 240px; border-color: rgba(87, 94, 207, 0.2); animation-duration: 8s; }
+      .zora-ring-2 { width: 280px; height: 280px; border-color: rgba(248, 88, 188, 0.15); animation-duration: 12s; animation-direction: reverse; }
+      .zora-ring-3 { width: 320px; height: 320px; border-color: rgba(254, 63, 33, 0.1); animation-duration: 16s; }
+
+      @keyframes floatOrb {
+        0% { transform: translateY(0px) scale(1); }
+        50% { transform: translateY(-10px) scale(1.02); }
+        100% { transform: translateY(0px) scale(1); }
+      }
+
+      @keyframes pulseAura {
+        0% { transform: scale(0.9); opacity: 0.4; }
+        100% { transform: scale(1.1); opacity: 0.7; }
+      }
+
+      @keyframes spinRing {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+    </style>
   </head>
   <body>
     <div class="zora-page" role="button" aria-label="Talk to Zora">
       <div class="zora-stars"></div>
-      <div class="zora-orb-stage" style="filter:hue-rotate(0deg)">
-        <div class="zora-aura" style="transform:scale(1);opacity:0.55;filter:blur(30px)"></div>
-        <div class="zora-ring zora-ring-1 zora-ring-idle" style="opacity:0.15"></div>
-        <div class="zora-ring zora-ring-2 zora-ring-idle" style="opacity:0.1"></div>
-        <div class="zora-ring zora-ring-3 zora-ring-idle" style="opacity:0.08"></div>
-        <div class="zora-orb-scale" style="transform:scale(1)">
+      <div class="zora-orb-stage">
+        <div class="zora-aura"></div>
+        <div class="zora-ring zora-ring-1 zora-ring-idle"></div>
+        <div class="zora-ring zora-ring-2 zora-ring-idle"></div>
+        <div class="zora-ring zora-ring-3 zora-ring-idle"></div>
+        <div class="zora-orb-scale">
           <div class="zora-orb zora-orb-idle">
             <div class="zora-orb-plasma-a"></div>
             <div class="zora-orb-plasma-b"></div>
             <div class="zora-orb-plasma-c"></div>
             <div class="zora-orb-glass"></div>
             <div class="zora-orb-shine"></div>
-            <div class="zora-orb-core" style="opacity:0.35"></div>
+            <div class="zora-orb-core"></div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Application Script Bundles -->
-    <script type="module" async src="/assets/index-B4aZZ1Ve.js"></script>
-    <script src="script.js"></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const zoraButton = document.querySelector(".zora-page");
+        const orb = document.querySelector(".zora-orb");
+        let isListening = false;
+
+        if (zoraButton && orb) {
+          zoraButton.addEventListener("click", () => {
+            isListening = !isListening;
+            
+            if (isListening) {
+              console.log("Zora is listening...");
+              orb.style.transform = "scale(1.15)";
+              orb.style.boxShadow = "0 0 70px rgba(248, 88, 188, 0.9)";
+              orb.style.background = "radial-gradient(circle at 30% 30%, #f858bc, #fe7b02, #575ecf)";
+            } else {
+              console.log("Zora stopped listening.");
+              orb.style.transform = "";
+              orb.style.boxShadow = "";
+              orb.style.background = "";
+            }
+          });
+        }
+      });
+    </script>
   </body>
 </html>
