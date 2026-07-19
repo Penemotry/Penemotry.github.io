@@ -43,11 +43,10 @@
         position: absolute;
         top: 40px;
         color: rgba(255, 255, 255, 0.4);
-        font-size: 16px;
+        font-size: 15px;
         letter-spacing: 2px;
         text-transform: uppercase;
         pointer-events: none;
-        text-align: center;
       }
 
       .subtitle-text {
@@ -79,7 +78,7 @@
         height: 130%;
         background: radial-gradient(circle, rgba(87, 94, 207, 0.4) 0%, rgba(248, 88, 188, 0.1) 50%, transparent 70%);
         filter: blur(40px);
-        transition: transform 0.08s ease, background 0.5s ease;
+        transition: transform 0.08s ease;
         pointer-events: none;
       }
 
@@ -94,7 +93,6 @@
         transition: transform 0.08s ease, box-shadow 0.3s ease, background 0.5s ease;
       }
 
-      /* State Modifiers */
       .listening-aura {
         background: radial-gradient(circle, rgba(248, 88, 188, 0.5) 0%, rgba(254, 123, 2, 0.15) 50%, transparent 70%);
       }
@@ -105,12 +103,12 @@
 
       .zora-orb.listening {
         background: radial-gradient(circle at 35% 35%, #f858bc, #fe7b02, #575ecf);
-        box-shadow: 0 0 80px rgba(248, 88, 188, 0.8), inset 0 0 20px rgba(255, 255, 255, 0.3);
+        box-shadow: 0 0 80px rgba(248, 88, 188, 0.8);
       }
 
       .zora-orb.speaking {
         background: radial-gradient(circle at 35% 35%, #00f2fe, #575ecf, #f858bc);
-        box-shadow: 0 0 80px rgba(0, 242, 254, 0.8), inset 0 0 20px rgba(255, 255, 255, 0.3);
+        box-shadow: 0 0 80px rgba(0, 242, 254, 0.8);
       }
 
       .zora-ring {
@@ -123,7 +121,6 @@
 
       .zora-ring-1 { width: 260px; height: 260px; border-color: rgba(87, 94, 207, 0.15); }
       .zora-ring-2 { width: 300px; height: 300px; border-color: rgba(248, 88, 188, 0.1); }
-      .zora-ring-3 { width: 340px; height: 340px; border-color: rgba(254, 63, 33, 0.05); }
     </style>
   </head>
   <body>
@@ -135,7 +132,6 @@
         <div class="zora-aura" id="aura"></div>
         <div class="zora-ring zora-ring-1" id="ring1"></div>
         <div class="zora-ring zora-ring-2" id="ring2"></div>
-        <div class="zora-ring zora-ring-3" id="ring3"></div>
         <div class="zora-orb" id="orb"></div>
       </div>
     </div>
@@ -146,7 +142,6 @@
       const aura = document.getElementById('aura');
       const ring1 = document.getElementById('ring1');
       const ring2 = document.getElementById('ring2');
-      const ring3 = document.getElementById('ring3');
       const statusLabel = document.getElementById('statusLabel');
       const subtitles = document.getElementById('subtitles');
 
@@ -155,42 +150,35 @@
       let analyser = null;
       let javascriptNode = null;
       let mediaStream = null;
-      let currentState = "idle"; // idle, listening, thinking, speaking
+      let currentState = "idle";
 
-      // Force-preload voices for Chrome TTS stability
-      if ('speechSynthesis' in window) {
-        window.speechSynthesis.getVoices();
-        window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
-      }
-
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-
+      // Self-cleaning setup prevents speech freeze crashes on multiple clicks
       container.addEventListener('click', () => {
-        if (!SpeechRecognition) {
-          subtitles.textContent = "Speech engine completely blocked or unsupported by this browser.";
-          return;
-        }
-
-        // Global Reset: If clicked at ANY point, kill TTS and clean up memory loops entirely
         if (window.speechSynthesis.speaking) {
           window.speechSynthesis.cancel();
         }
 
         if (currentState === "listening") {
-          safelyShutdownTracks();
+          killAudioSystem();
           resetToIdle("TAP TO TALK");
         } else {
-          safelyShutdownTracks(); // Clean up potential ghost processes
-          startListeningSession();
+          killAudioSystem(); 
+          bootSpeechEngine();
         }
       });
 
-      function startListeningSession() {
+      function bootSpeechEngine() {
         currentState = "listening";
         statusLabel.textContent = "LISTENING NOW";
-        subtitles.textContent = "Listening to your voice...";
+        subtitles.textContent = "Say something to Zora...";
         orb.className = "zora-orb listening";
         aura.className = "zora-aura listening-aura";
+
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+          subtitles.textContent = "Speech recognition unsupported on this web runtime.";
+          return;
+        }
 
         recognition = new SpeechRecognition();
         recognition.continuous = false;
@@ -198,62 +186,49 @@
         recognition.lang = 'en-US';
 
         recognition.onstart = () => {
-          activateMicHardwareFeedback();
+          bindMicrophoneMatrix();
         };
 
-        recognition.onresult = async (event) => {
+        recognition.onresult = (event) => {
           if (currentState !== "listening") return;
-          
           const transcript = event.results[0][0].transcript;
+          
           subtitles.textContent = `"${transcript}"`;
-          statusLabel.textContent = "THINKING";
+          statusLabel.textContent = "GENERATING RESPONSE";
           currentState = "thinking";
           
-          orb.className = "zora-orb";
-          aura.className = "zora-aura";
-          safelyShutdownTracks();
+          killAudioSystem();
           
-          // Trigger the generative response engine
-          const aiReply = generateProceduralResponse(transcript);
-          
-          // Give a short artificial processing window for UI realism before speaking
           setTimeout(() => {
             if (currentState === "thinking") {
-              executeTextToSpeech(aiReply);
+              const creativeResponse = buildGenerativeText(transcript);
+              fireTextToSpeech(creativeResponse);
             }
-          }, 600);
+          }, 700);
         };
 
-        recognition.onerror = (e) => {
-          console.warn("Speech recognition caught an error:", e.error);
+        recognition.onerror = () => {
           if (currentState === "listening") {
-            resetToIdle("TAP TO TALK AGAIN");
-            subtitles.textContent = "I didn't quite catch that. Try speaking again.";
+            resetToIdle("TAP TO RESTART");
+            subtitles.textContent = "System timed out. Tap and speak again.";
           }
         };
 
         recognition.onend = () => {
-          if (currentState === "listening") {
-            resetToIdle("TAP TO TALK");
-          }
+          if (currentState === "listening") resetToIdle("TAP TO TALK");
         };
 
-        try {
-          recognition.start();
-        } catch (err) {
-          console.error("Failed to boot recognition instance:", err);
-          resetToIdle("TAP TO TALK");
-        }
+        recognition.start();
       }
 
-      async function activateMicHardwareFeedback() {
+      async function bindMicrophoneMatrix() {
         try {
-          mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+          mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
           audioContext = new (window.AudioContext || window.webkitAudioContext)();
           analyser = audioContext.createAnalyser();
-          const source = audioContext.createMediaStreamSource(mediaStream);
+          analyser.fftSize = 32;
           
-          analyser.fftSize = 64;
+          const source = audioContext.createMediaStreamSource(mediaStream);
           source.connect(analyser);
           
           javascriptNode = audioContext.createScriptProcessor(256, 1, 1);
@@ -262,36 +237,103 @@
           
           javascriptNode.onaudioprocess = () => {
             if (currentState !== "listening") return;
-            const array = new Uint8Array(analyser.frequencyBinCount);
-            analyser.getByteFrequencyData(array);
+            const dataArray = new Uint8Array(analyser.frequencyBinCount);
+            analyser.getByteFrequencyData(dataArray);
             
-            let total = 0;
-            for (let i = 0; i < array.length; i++) {
-              total += array[i];
-            }
-            const volume = total / array.length;
+            let sum = 0;
+            for(let i=0; i<dataArray.length; i++) { sum += dataArray[i]; }
+            const micVolume = sum / dataArray.length;
             
-            // Dynamic multi-element scaling based on active microphone frames
-            const coreScale = 1 + (volume / 90); 
-            orb.style.transform = `scale(${coreScale})`;
-            aura.style.transform = `scale(${coreScale * 1.15})`;
-            ring1.style.transform = `scale(${1 + (volume / 160)})`;
-            ring2.style.transform = `scale(${1 + (volume / 220)})`;
+            // Immediate real-time fluid scaling metrics
+            const currentScale = 1 + (micVolume / 75);
+            orb.style.transform = `scale(${currentScale})`;
+            aura.style.transform = `scale(${currentScale * 1.15})`;
+            ring1.style.transform = `scale(${1 + (micVolume / 140)})`;
+            ring2.style.transform = `scale(${1 + (micVolume / 180)})`;
           };
         } catch (err) {
-          console.warn("Microphone hardware access unavailable:", err);
+          console.warn("Microphone feedback loop denied:", err);
         }
       }
 
-      function safelyShutdownTracks() {
+      // Procedural Generative Text Model
+      function buildGenerativeText(input) {
+        const text = input.toLowerCase();
+
+        const dictionary = {
+          starts: ["Synthesizing new data streams. ", "Opening structural pathways. ", "Processing system arrays. ", "Ah, analyzing that conceptual matrix. "],
+          nodes: ["The logic variables suggest that custom web applications ", "Building dynamic visual designs with fluid assets ", "Integrating clean client architecture patterns ", "Running complete server-side simulations "],
+          conclusions: ["allows systems to scale efficiently.", "generates optimal operational benchmarks.", "creates an engaging environment infrastructure.", "keeps variables cleanly separated."]
+        };
+
+        if (text.includes("hello") || text.includes("hi")) {
+          return "Connection secure. I am Zora, your operational voice interface. State your parameters and let's begin.";
+        }
+        if (text.includes("weather")) {
+          return "Atmospheric diagnostic complete. Local weather arrays show standard clarity indices with balanced temperature frames.";
+        }
+        if (text.includes("name")) {
+          return "My identity tag is Zora. A fully functional generative assistant compiled within a unified single file script.";
+        }
+
+        // Build unique procedural responses
+        const randomElement = (arr) => arr[Math.floor(Math.random() * arr.length)];
+        return randomElement(dictionary.starts) + randomElement(dictionary.nodes) + randomElement(dictionary.conclusions);
+      }
+
+      function fireTextToSpeech(outputPhrase) {
+        currentState = "speaking";
+        statusLabel.textContent = "ZORA VOICE ACTIVE";
+        subtitles.textContent = outputPhrase;
+        orb.className = "zora-orb speaking";
+        aura.className = "zora-aura speaking-aura";
+
+        const speakInstance = new SpeechSynthesisUtterance(outputPhrase);
+        
+        // Find standard English voice engine profile
+        const activeVoices = window.speechSynthesis.getVoices();
+        const preferredVoice = activeVoices.find(v => v.lang.includes("en-US") || v.lang.startsWith("en"));
+        if (preferredVoice) speakInstance.voice = preferredVoice;
+
+        speakInstance.rate = 1.0;
+        speakInstance.pitch = 1.0;
+
+        // Interactive frequency bouncing emulation while voice speaks out loud
+        let waveDirection = 1;
+        let waveScale = 1;
+        const voiceFrequencyPulse = setInterval(() => {
+          if (!window.speechSynthesis.speaking || currentState !== "speaking") {
+            clearInterval(voiceFrequencyPulse);
+            return;
+          }
+          waveScale += 0.015 * waveDirection;
+          if (waveScale > 1.06 || waveScale < 0.97) waveDirection *= -1;
+          
+          orb.style.transform = `scale(${waveScale})`;
+          aura.style.transform = `scale(${waveScale * 1.1})`;
+        }, 100);
+
+        speakInstance.onend = () => {
+          clearInterval(voiceFrequencyPulse);
+          if (currentState === "speaking") resetToIdle("TAP TO TALK");
+        };
+
+        speakInstance.onerror = () => {
+          clearInterval(voiceFrequencyPulse);
+          if (currentState === "speaking") resetToIdle("TAP TO TALK");
+        };
+
+        window.speechSynthesis.speak(speakInstance);
+      }
+
+      function killAudioSystem() {
         try {
-          if (javascriptNode) { javascriptNode.disconnect(); javascriptNode.onaudioprocess = null; javascriptNode = null; }
+          if (javascriptNode) { javascriptNode.disconnect(); javascriptNode = null; }
           if (analyser) { analyser.disconnect(); analyser = null; }
           if (audioContext) { audioContext.close(); audioContext = null; }
-          if (mediaStream) { mediaStream.getTracks().forEach(t => t.stop()); mediaStream = null; }
-        } catch(e) {
-          console.error("Error tearing down audio hooks:", e);
-        }
+          if (mediaStream) { mediaStream.getTracks().forEach(track => track.stop()); mediaStream = null; }
+        } catch(e) {}
+        
         if (recognition) {
           try { recognition.abort(); } catch(e){}
           recognition = null;
@@ -302,107 +344,11 @@
         ring2.style.transform = "";
       }
 
-      // Generative Text Construction Engine
-      function generateProceduralResponse(input) {
-        const query = input.toLowerCase();
-        
-        const openings = [
-          "Processing your telemetry data. ",
-          "Analyzing that structure now. ",
-          "Ah, navigating that thought vector. ",
-          "Accessing information arrays. ",
-          "System metrics evaluated. "
-        ];
-        
-        const bodies = [
-          "When inspecting custom operational designs, standard iterative development loops yield the fastest deployment scaling. ",
-          "The core matrix suggests that balancing pure client aesthetics with deep algorithmic structure creates the most optimal application frame. ",
-          "Historical research patterns indicate that complex, multilayered systems thrive when engineering architectures are stripped down to modular units. ",
-          "Simulating a direct environment sync right now shows that everything looks structurally synchronized and functional. "
-        ];
-        
-        const closings = [
-          " What parameters are we scaling next?",
-          " Shall we proceed with more deep system research?",
-          " Ready to compile the next set of code variables.",
-          " What's our next objective?"
-        ];
-
-        // Specific context injections based on vocal triggers
-        if (query.includes("weather")) {
-          return "Atmospheric diagnostic data acquired. Local tracking variables indicate standard structural visibility and clean conditions inside the console grid. What's our next checkpoint?";
-        }
-        if (query.includes("hello") || query.includes("hi ")) {
-          return "Greetings User. Connection established. I am Zora, your voice-activated smart interface matrix. State your operational objective and we can begin.";
-        }
-        if (query.includes("name")) {
-          return "I am designated as Zora. An automated voice assistant module running fully self-contained web scripts.";
-        }
-        if (query.includes("clear") || query.includes("reset")) {
-          return "Mainframe variables wiped. System state set back to pristine baseline operational configurations.";
-        }
-
-        // Return a completely randomized generated combination sentence
-        const randOpen = openings[Math.floor(Math.random() * openings.length)];
-        const randBody = bodies[Math.floor(Math.random() * bodies.length)];
-        const randClose = closings[Math.floor(Math.random() * closings.length)];
-        
-        return randOpen + randBody + randClose;
-      }
-
-      function executeTextToSpeech(text) {
-        currentState = "speaking";
-        statusLabel.textContent = "ZORA REPLYING";
-        subtitles.textContent = text;
-        orb.className = "zora-orb speaking";
-        aura.className = "zora-aura speaking-aura";
-
-        const utterance = new SpeechSynthesisUtterance(text);
-        
-        // Select an optimal system voice profile if available
-        const voices = window.speechSynthesis.getVoices();
-        const premiumVoice = voices.find(v => v.name.includes("Google US English") || v.name.includes("Natural") || v.lang.startsWith("en"));
-        if (premiumVoice) utterance.voice = premiumVoice;
-
-        utterance.rate = 1.05;
-        utterance.pitch = 1.0;
-
-        // Visual synthesizer pulse loop to match active output
-        let frameToggle = true;
-        const pulseLoop = setInterval(() => {
-          if (!window.speechSynthesis.speaking || currentState !== "speaking") {
-            clearInterval(pulseLoop);
-            return;
-          }
-          const speakScale = frameToggle ? 1.04 : 0.98;
-          orb.style.transform = `scale(${speakScale})`;
-          aura.style.transform = `scale(${speakScale * 1.1})`;
-          frameToggle = !frameToggle;
-        }, 250);
-
-        utterance.onend = () => {
-          clearInterval(pulseLoop);
-          if (currentState === "speaking") resetToIdle("TAP TO TALK AGAIN");
-        };
-
-        utterance.onerror = (err) => {
-          console.error("TTS Engine encountered an error:", err);
-          clearInterval(pulseLoop);
-          if (currentState === "speaking") resetToIdle("TAP TO TALK AGAIN");
-        };
-
-        window.speechSynthesis.speak(utterance);
-      }
-
-      function resetToIdle(message) {
+      function resetToIdle(msg) {
         currentState = "idle";
-        statusLabel.textContent = message;
+        statusLabel.textContent = msg;
         orb.className = "zora-orb";
         aura.className = "zora-aura";
-        orb.style.transform = "scale(1)";
-        aura.style.transform = "scale(1)";
-        ring1.style.transform = "scale(1)";
-        ring2.style.transform = "scale(1)";
       }
     </script>
   </body>
